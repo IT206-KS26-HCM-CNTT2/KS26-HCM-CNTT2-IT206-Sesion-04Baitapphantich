@@ -1,0 +1,76 @@
+BÀI GIẢI: SO SÁNH TRADE-OFF CÁC GIẢI PHÁP RA LỆNH TRONG KỸ THUẬT PROMPTING NÂNG CAO (LOGIC & CHUỖI)
+BƯỚC 1: ĐỀ XUẤT 2 PROMPT MẪU (BÀI TOÁN XỬ LÝ CHUỖI ĐƠN HÀNG & KHIẾU NẠI)
+1. Giải pháp 1: Phương án Đơn giản (Ngắn gọn, Zero-shot CoT)
+[Bắt đầu nội dung Prompt 1]
+Hãy đóng vai nhân viên CSKH. Đọc tin nhắn của khách hàng dưới đây, suy nghĩ từng bước để phân loại vấn đề (Đặt hàng hay Khiếu nại), kiểm tra xem có thiếu thông tin liên hệ không và viết phản hồi ngắn gọn. Nếu thiếu thông tin thì báo lỗi.
+Tin nhắn: [Chèn dữ liệu]
+[Kết thúc nội dung Prompt 1]
+2. Giải pháp 2: Phương án Chi tiết (Chặt chẽ, Structuring & Guardrails)
+[Bắt đầu nội dung Prompt 2]
+# Vai trò
+Bạn là Hệ thống Điều phối Dữ liệu Tự động (Data Orchestrator) cho bộ phận CSKH.
+# Quy trình chuỗi tư duy (Chain-of-Thought & Chaining)
+Thực hiện tuần tự 3 bước và chỉ xuất kết quả cuối cùng:
+1. Trích xuất thực thể: Tên, SĐT, Mã đơn, Nội dung chính.
+2. Kiểm tra điều kiện (Edge-case & Xử lý đứt gãy):
+   - Nếu là [Đặt hàng]: Bắt buộc phải có SĐT (đủ 10 số) và Tên sản phẩm. Thiếu 1 trong 2 -> Gán cờ MISSING_INFO.
+   - Nếu là [Khiếu nại]: Bắt buộc phải có Mã đơn. Nếu không có -> Gán cờ NEED_ORDER_ID.
+   - Nếu dữ liệu nhiễu/spam/vô nghĩa -> Gán cờ INVALID_INPUT và dừng xử lý.
+3. Định dạng đầu ra: Bắt buộc trả về chuẩn JSON, tuyệt đối không kèm văn bản giải thích bên ngoài.
+# Dữ liệu đầu vào
+[Chèn dữ liệu]
+# Mẫu JSON bắt buộc
+{
+  "intent": "ORDER | COMPLAINT | UNKNOWN",
+
+  "status": "VALID | MISSING_INFO | NEED_ORDER_ID | INVALID_INPUT",
+
+  "extracted_data": {"name": null, "phone": null, "order_id": null},
+
+  "next_action": "Hành động tiếp theo cho hệ thống"
+
+}
+
+[Kết thúc nội dung Prompt 2]
+BƯỚC 2: BẢNG SO SÁNH TRADE-OFF
+* Tiêu chí 1: Độ dễ hiểu
+  - Giải pháp 1 (Đơn giản): Cao (Viết tự nhiên, dễ đọc, ai cũng có thể sửa nhanh)
+  - Giải pháp 2 (Chi tiết): Trung bình (Cấu trúc phức tạp, đòi hỏi người viết hiểu rõ logic)
+* Tiêu chí 2: Tốn token
+  - Giải pháp 1 (Đơn giản): Ít (Tiết kiệm chi phí API và thời gian phản hồi nhanh)
+  - Giải pháp 2 (Chi tiết): Nhiều hơn (Tốn token cho phần quy tắc và định dạng mẫu)
+* Tiêu chí 3: Chặn lỗi biên
+  - Giải pháp 1 (Đơn giản): Trung bình (AI dễ tự suy diễn khi gặp dữ liệu trống hoặc nhiễu)
+  - Giải pháp 2 (Chi tiết): Cực tốt (Bắt chính xác từng trường hợp thiếu dữ liệu và ngắt chuỗi kịp thời)
+* Tiêu chí 4: Tính ổn định đầu ra
+- Giải pháp 1 (Đơn giản): Kém (Khó nối tiếp với các bước tự động hóa phía sau)
+  - Giải pháp 2 (Chi tiết): Rất cao (Luôn tuân thủ định dạng JSON để tích hợp trực tiếp vào hệ thống)
+* Tiêu chí 5: Khả năng mở rộng
+  - Giải pháp 1 (Đơn giản): Kém (Khó nối tiếp với các bước tự động hóa phía sau)
+  - Giải pháp 2 (Chi tiết): Tốt (Dễ dàng dùng Output của bước này làm Input cho bước tiếp theo)
+BƯỚC 3: LỰA CHỌN PHƯƠNG ÁN TỐI ƯU VÀ CHẠY THỬ
+1. Lựa chọn & Lý do:
+* Phương án tối ưu: Giải pháp 2 (Chi tiết, nhiều ràng buộc).
+* Lý do: Trong bối cảnh tự động hóa quy trình (Prompt Chaining) và xử lý đứt gãy, rủi ro lớn nhất là dữ liệu bị sai lệch làm sập các bước xử lý phía sau. Dù Giải pháp 2 tốn nhiều token hơn một chút, nhưng nó đánh đổi (trade-off) được tính chính xác tuyệt đối, khả năng chặn lỗi biên và định dạng JSON đồng nhất, giúp hệ thống vận hành trơn tru mà không cần con người kiểm tra thủ công.
+2. Kết quả chạy thử (Simulation):
+* Dữ liệu đầu vào (Bẫy thiếu dữ liệu): "Alo shop ơi hôm qua tôi mới nhận cái áo khoác mà bị rách tay áo rồi, đổi cho tôi với!" (Khách khiếu nại nhưng quên cung cấp Mã đơn hàng).
+* Kết quả AI trả về (Áp dụng Giải pháp 2):	
+{
+
+  "intent": "COMPLAINT",
+
+  "status": "NEED_ORDER_ID",
+
+  "extracted_data": {
+
+    "name": null,
+
+    "phone": null,
+
+    "order_id": null
+
+  },
+
+  "next_action": "Kích hoạt tin nhắn tự động yêu cầu khách hàng cung cấp Mã đơn hàng để đối chiếu trước khi chuyển nhân viên xử lý."
+
+}
